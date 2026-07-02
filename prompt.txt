@@ -1,0 +1,34 @@
+You are generating a production-grade Agent Skill according to Claude's official best practices (https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices).
+
+The skill is called `svg-icon-generator`. It allows AI agents and users to precisely extract mathematically perfect SVGs from high-resolution raster images (e.g. app screenshots). This solves the problem where geometric tracing via `potrace` fails due to compression artifacts or gradients by first letting the user manually crop the icons from the image, and then running a specialized image processing pipeline before tracing.
+
+Create the following files in the current directory (`skills/svg-icon-generator/`):
+
+1. `SKILL.md`: The skill documentation with proper YAML frontmatter (name, description) and markdown body. The body should explain when to use the skill and how to use the CLI tool.
+
+2. `scripts/svg-tools.py`: A Python CLI tool using `argparse` with two subcommands:
+   
+   Command A: `generate-cropper <image_path> <icon_name_1> [icon_name_2 ...]`
+   - Reads the input image, converts it to a base64 data URI.
+   - Generates a standalone HTML file (`crop.html`) in the current directory.
+   - The HTML file should use `cropper.js` (via CDN) to allow the user to crop the image.
+   - It should have a dropdown to select which icon is currently being cropped (from the provided icon names).
+   - It should have a "Download Precise Crop" button. When clicked, it gets the cropped canvas, converts to PNG data URL, and triggers a browser download with the filename `{selected_icon_name}_precise.png`.
+   - The generated HTML needs to be fully self-contained (no external assets other than CDN for cropper.js).
+   
+   Command B: `trace <png_file_1> [png_file_2 ...]`
+   - Takes one or more paths to cropped PNG files.
+   - For each PNG:
+     1. Open with Pillow (`PIL`), convert to grayscale ("L").
+     2. Threshold to black and white (e.g., `< 150` becomes black, else white).
+     3. Upscale the image 5x using `Image.Resampling.BICUBIC`.
+     4. Apply a Gaussian Blur (radius=5).
+     5. Re-threshold to black and white (e.g., `< 128` becomes black, else white).
+     6. Save as a temporary `.bmp` file.
+     7. Run `potrace -s -a 1.5 -O 1.0 {tmp.bmp} -o {output_name.svg}` (using `os.system` or `subprocess`).
+     8. Clean up the temporary `.bmp` file.
+   - Prints the path to the generated SVG files.
+
+Ensure `scripts/svg-tools.py` has `#!/usr/bin/env python3` at the top and is executable. Ensure it handles exceptions gracefully.
+
+No need to explain, just generate the code files directly using your tool capabilities.
